@@ -72,15 +72,6 @@ impl Scanner {
                 self.add_token_sym(token_type);
             }
             '/' => self.slash(),
-            /*
-            if self.match_char('/') {
-                    while self.peek() != '\n' && !self.is_at_end() {
-                        self.advance();
-                    }
-                } else {
-                    self.add_token_sym(TokenType::Slash);
-                },
-             */
             '"' => self.string(),
             '\n' => self.line += 1,
             c if c != '\n' && c.is_whitespace() => {}
