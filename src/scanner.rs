@@ -71,14 +71,16 @@ impl Scanner {
                 let token_type = self.match_token('=', TokenType::GreaterEqual, TokenType::Greater);
                 self.add_token_sym(token_type);
             }
-            '/' =>
-                if self.match_char('/') {
+            '/' => self.slash(),
+            /*
+            if self.match_char('/') {
                     while self.peek() != '\n' && !self.is_at_end() {
                         self.advance();
                     }
                 } else {
                     self.add_token_sym(TokenType::Slash);
                 },
+             */
             '"' => self.string(),
             '\n' => self.line += 1,
             c if c != '\n' && c.is_whitespace() => {}
@@ -87,6 +89,44 @@ impl Scanner {
 
             c if is_alpha(c) => self.identifier(),
             _ => error(self.line, "Unexpected character."),
+        }
+    }
+
+    fn slash(&mut self) {
+        match self.peek() {
+            '/' => self.line_comment(),
+            '*' => { self.block_comment(); },
+            _ => self.add_token_sym(TokenType::Slash),
+        }
+    }
+
+    fn line_comment(&mut self) {
+        self.advance();
+        while self.peek() != '\n' && !self.is_at_end() {
+            self.advance();
+        }
+    }
+
+    fn block_comment(&mut self) -> bool {
+        loop {
+            let c = self.advance();
+            if c == '/' {
+                if self.peek() == '*' {
+                    if !self.block_comment() {
+                        return false;
+                    }
+                }
+            } else if c == '*' {
+                if self.peek() == '/' {
+                    self.advance();
+                    return true;
+                }
+            } else if c == '\n' {
+                self.line += 1;
+            } else if self.is_at_end() {
+                error(self.line, "Unterminated block comment");
+                return false;
+            }
         }
     }
 
@@ -210,13 +250,15 @@ impl Scanner {
 
 #[cfg(test)]
 mod tests {
-    use crate::error::get_error;
+    use crate::error::has_error;
 
     use super::*;
 
     #[test]
     fn test_eof() {
         let scanner = Scanner::new("");
+
+        assert!(!has_error());
 
         assert_eq!(scanner.tokens[0],
                    Token::new(TokenType::Eof, String::from(""), None, 1));
@@ -225,6 +267,8 @@ mod tests {
     #[test]
     fn test_single_char_op() {
         let scanner = Scanner::new("+");
+
+        assert!(!has_error());
 
         assert_eq!(scanner.tokens.len(), 2);
         assert_eq!(scanner.tokens[0],
@@ -237,6 +281,8 @@ mod tests {
     fn test_two_char_op() {
         let scanner = Scanner::new("!=");
 
+        assert!(!has_error());
+
         assert_eq!(scanner.tokens[0],
                    Token::new(TokenType::BangEqual, String::from("!="), None, 1));
     }
@@ -245,6 +291,9 @@ mod tests {
     fn test_comment() {
         let scanner = Scanner::new("// comment line");
 
+        dbg!(&scanner.tokens);
+
+        assert!(!has_error());
         assert_eq!(scanner.tokens.len(), 1);
     }
 
@@ -252,6 +301,7 @@ mod tests {
     fn test_single_line_string_literal() {
         let scanner = Scanner::new("\"hello world\"");
 
+        assert!(!has_error());
         assert_eq!(scanner.tokens[0],
                    Token::new(TokenType::String, String::from("\"hello world\""),
                               Some(TokenLiteral::String(String::from("hello world"))), 1));
@@ -261,6 +311,7 @@ mod tests {
     fn test_multi_line_string_literal() {
         let scanner = Scanner::new("\"hello\n\nworld\"");
 
+        assert!(!has_error());
         assert_eq!(scanner.tokens[0],
                    Token::new(TokenType::String, String::from("\"hello\n\nworld\""),
                               Some(TokenLiteral::String(String::from("hello\n\nworld"))), 3));
@@ -270,13 +321,14 @@ mod tests {
     fn test_uncompleted_string() {
         let _ = Scanner::new("\"hello");
 
-        assert!(get_error());
+        assert!(has_error());
     }
 
     #[test]
     fn test_int_number_literal() {
         let scanner = Scanner::new("1234");
 
+        assert!(!has_error());
         assert_eq!(scanner.tokens[0],
                    Token::new(TokenType::Number, String::from("1234"),
                               Some(TokenLiteral::Number(1234.0)), 1));
@@ -286,6 +338,7 @@ mod tests {
     fn test_float_number_literal() {
         let scanner = Scanner::new("1234.56");
 
+        assert!(!has_error());
         assert_eq!(scanner.tokens[0],
                    Token::new(TokenType::Number, String::from("1234.56"),
                               Some(TokenLiteral::Number(1234.56)), 1));
@@ -295,6 +348,7 @@ mod tests {
     fn test_keyword() {
         let scanner = Scanner::new("class");
 
+        assert!(!has_error());
         assert_eq!(scanner.tokens[0],
                    Token::new(TokenType::Class, String::from("class"), None, 1));
     }
@@ -303,6 +357,7 @@ mod tests {
     fn test_identifier() {
         let scanner = Scanner::new("classic");
 
+        assert!(!has_error());
         assert_eq!(scanner.tokens[0],
                    Token::new(TokenType::Identifier, String::from("classic"), None, 1));
     }
@@ -311,13 +366,64 @@ mod tests {
     fn test_statement() {
         let scanner = Scanner::new("var language = \"lox\";\nvar a = 10.2;\n");
 
-        dbg!(&scanner.tokens);
-
+        assert!(!has_error());
         assert_eq!(scanner.tokens, vec![
             Token::new(TokenType::Var, String::from("var"), None, 1),
             Token::new(TokenType::Identifier, String::from("language"), None, 1),
             Token::new(TokenType::Equal, String::from("="), None, 1),
             Token::new(TokenType::String, String::from("\"lox\""), Some(TokenLiteral::String(String::from("lox"))), 1),
+            Token::new(TokenType::Semicolon, String::from(";"), None, 1),
+
+            Token::new(TokenType::Var, String::from("var"), None, 2),
+            Token::new(TokenType::Identifier, String::from("a"), None, 2),
+            Token::new(TokenType::Equal, String::from("="), None, 2),
+            Token::new(TokenType::Number, String::from("10.2"), Some(TokenLiteral::Number(10.2)), 2),
+            Token::new(TokenType::Semicolon, String::from(";"), None, 2),
+
+            Token::new(TokenType::Eof, String::from(""), None, 3),
+        ]);
+    }
+
+    #[test]
+    fn test_block_comment() {
+        let scanner = Scanner::new("/* comment */");
+
+        assert!(!has_error());
+        assert_eq!(scanner.tokens, vec![Token::new(TokenType::Eof, String::from(""), None, 1),]);
+    }
+
+    #[test]
+    fn test_block_comment_in_code() {
+        let scanner = Scanner::new("var x = \"lox\";\n/* comment */var a = 10.2;\n");
+
+        assert!(!has_error());
+        assert_eq!(scanner.tokens, vec![
+            Token::new(TokenType::Var, String::from("var"), None, 1),
+            Token::new(TokenType::Identifier, String::from("x"), None, 1),
+            Token::new(TokenType::Equal, String::from("="), None, 1),
+            Token::new(TokenType::String, String::from("\"lox\""), Some(TokenLiteral::String(String::from("lox"))), 1),
+            Token::new(TokenType::Semicolon, String::from(";"), None, 1),
+
+            Token::new(TokenType::Var, String::from("var"), None, 2),
+            Token::new(TokenType::Identifier, String::from("a"), None, 2),
+            Token::new(TokenType::Equal, String::from("="), None, 2),
+            Token::new(TokenType::Number, String::from("10.2"), Some(TokenLiteral::Number(10.2)), 2),
+            Token::new(TokenType::Semicolon, String::from(";"), None, 2),
+
+            Token::new(TokenType::Eof, String::from(""), None, 3),
+        ]);
+    }
+
+    #[test]
+    fn test_nested_block_comment() {
+        let scanner = Scanner::new("var a = \"a\";\n/* com /* ok */ ment */var a = 10.2;\n");
+
+        assert!(!has_error());
+        assert_eq!(scanner.tokens, vec![
+            Token::new(TokenType::Var, String::from("var"), None, 1),
+            Token::new(TokenType::Identifier, String::from("a"), None, 1),
+            Token::new(TokenType::Equal, String::from("="), None, 1),
+            Token::new(TokenType::String, String::from("\"a\""), Some(TokenLiteral::String(String::from("a"))), 1),
             Token::new(TokenType::Semicolon, String::from(";"), None, 1),
 
             Token::new(TokenType::Var, String::from("var"), None, 2),

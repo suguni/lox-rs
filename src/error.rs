@@ -17,7 +17,7 @@ pub fn set_error(error: bool) {
     HAS_ERROR.set(error);
 }
 
-pub fn get_error() -> bool {
+pub fn has_error() -> bool {
     HAS_ERROR.get()
 }
 
@@ -26,11 +26,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn has_error() {
-        assert!(!get_error());
+    fn test_error() {
+        assert!(!has_error());
         set_error(true);
-        assert!(get_error());
+        assert!(has_error());
         set_error(false);
-        assert!(!get_error());
+        assert!(!has_error());
     }
 }
