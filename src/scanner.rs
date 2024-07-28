@@ -104,19 +104,19 @@ impl Scanner {
             if c == '/' {
                 if self.peek() == '*' {
                     if !self.block_comment() {
-                        return false;
+                        break false;
                     }
                 }
             } else if c == '*' {
                 if self.peek() == '/' {
                     self.advance();
-                    return true;
+                    break true;
                 }
             } else if c == '\n' {
                 self.line += 1;
             } else if self.is_at_end() {
                 error(self.line, "Unterminated block comment");
-                return false;
+                break false;
             }
         }
     }

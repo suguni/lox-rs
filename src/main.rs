@@ -1,12 +1,12 @@
 use std::{env, io};
 use std::fs::File;
 use std::io::Write;
-
 use crate::scanner::Scanner;
 
 mod token;
 mod scanner;
 mod error;
+mod expressions;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -36,7 +36,7 @@ fn run_prompt() -> io::Result<()> {
         io::stdin().read_line(&mut line)?;
 
         if line.len() == 0 {
-            break
+            break;
         }
 
         run(line)?;
@@ -51,4 +51,3 @@ fn run(source: String) -> io::Result<()> {
     }
     Ok(())
 }
-

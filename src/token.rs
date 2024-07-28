@@ -1,5 +1,4 @@
 use std::fmt;
-use std::fmt::Formatter;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum TokenType {
@@ -49,7 +48,7 @@ pub enum TokenType {
     Var,
     While,
 
-    Eof
+    Eof,
 }
 
 impl TokenType {
@@ -82,16 +81,25 @@ pub enum TokenLiteral {
     Number(f64),
 }
 
+impl fmt::Display for TokenLiteral {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TokenLiteral::String(s) => write!(f, "{}", s),
+            TokenLiteral::Number(n) => write!(f, "{}", n),
+        }
+    }
+}
+
+
 #[derive(Debug, PartialEq)]
 pub struct Token {
     token_type: TokenType,
-    lexeme: String,
+    pub lexeme: String,
     literal: Option<TokenLiteral>,
     line: usize,
 }
 
 impl Token {
-
     pub fn new(token_type: TokenType, lexeme: String, literal: Option<TokenLiteral>, line: usize) -> Self {
         Token {
             token_type,
@@ -109,17 +117,34 @@ impl Token {
             line,
         }
     }
+
+    pub fn minus(line: usize) -> Self {
+        Token {
+            token_type: TokenType::Minus,
+            lexeme: String::from("-"),
+            literal: None,
+            line,
+        }
+    }
+
+    pub fn star(line: usize) -> Self {
+        Token {
+            token_type: TokenType::Star,
+            lexeme: String::from("*"),
+            literal: None,
+            line,
+        }
+    }
 }
 
 impl fmt::Display for Token {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?} {} {}", self.token_type, self.lexeme, self.line)
     }
 }
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
     #[test]
