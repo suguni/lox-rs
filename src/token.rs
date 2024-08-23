@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum TokenType {
     // Single-character tokens.
     LeftParen,
@@ -75,10 +75,13 @@ impl TokenType {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TokenLiteral {
     String(String),
     Number(f64),
+    True,
+    False,
+    Nil,
 }
 
 impl fmt::Display for TokenLiteral {
@@ -86,16 +89,18 @@ impl fmt::Display for TokenLiteral {
         match self {
             TokenLiteral::String(s) => write!(f, "{}", s),
             TokenLiteral::Number(n) => write!(f, "{}", n),
+            TokenLiteral::True => write!(f, "true"),
+            TokenLiteral::False => write!(f, "false"),
+            TokenLiteral::Nil => write!(f, "nil"),
         }
     }
 }
 
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Token {
-    token_type: TokenType,
+    pub token_type: TokenType,
     pub lexeme: String,
-    literal: Option<TokenLiteral>,
+    pub literal: Option<TokenLiteral>,
     line: usize,
 }
 
